@@ -1,15 +1,3 @@
-"""
-Ticker validation with Name-to-Ticker resolution.
-
-The CSV is loaded exactly once (at FastAPI startup) into two in-memory
-data structures:
-  1. A set of valid ticker symbols (e.g. "INFY.NS") for O(1) membership checks.
-  2. A dict mapping lowercased company names to symbols for fuzzy resolution
-     (e.g. "infosys limited" -> "INFY").
-
-This allows users to search by either the official ticker symbol OR by
-the company name.
-"""
 import csv
 from pathlib import Path
 from typing import Optional
@@ -25,7 +13,7 @@ class TickerCsvError(RuntimeError):
 
 
 def _find_field(fieldnames: Optional[list[str]], target: str) -> Optional[str]:
-    """Find a CSV header field by case-insensitive match."""
+    
     if not fieldnames:
         return None
     for name in fieldnames:
@@ -35,11 +23,7 @@ def _find_field(fieldnames: Optional[list[str]], target: str) -> Optional[str]:
 
 
 def load_valid_tickers(csv_path: Optional[str] = None) -> set[str]:
-    """
-    Loads the NSE/BSE equity CSV (e.g. EQUITY_L.csv) once and builds:
-      - An in-memory set of valid, normalized tickers (SYMBOL + ".NS").
-      - A name-to-symbol mapping for fuzzy resolution.
-    """
+    
     global _VALID_TICKERS, _NAME_TO_SYMBOL
     csv_path_str = csv_path or settings.TICKER_CSV_PATH
     if not csv_path_str:
@@ -78,13 +62,7 @@ def load_valid_tickers(csv_path: Optional[str] = None) -> set[str]:
 
 
 def _resolve_name_to_ticker(raw: str) -> Optional[str]:
-    """
-    Try to resolve a company name to an official ticker symbol.
-    Prioritizes:
-    1. Exact Match ("infosys limited")
-    2. Prefix Match ("infosys" -> "infosys limited")
-    3. Partial Match ("infosys" -> "hcl infosystems")
-    """
+    
     query = raw.strip().lower()
     if not query:
         return None
@@ -104,11 +82,7 @@ def _resolve_name_to_ticker(raw: str) -> Optional[str]:
 
 
 def normalize_ticker(raw: str) -> str:
-    """
-    Normalize user input into an official ticker.
-    1. Try as a direct ticker symbol (e.g. "INFY" -> "INFY.NS").
-    2. If not found, try resolving as a company name (e.g. "Infosys" -> "INFY.NS").
-    """
+    
     if raw is None:
         return ""
 

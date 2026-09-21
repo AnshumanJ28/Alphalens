@@ -1,11 +1,3 @@
-"""
-Offline Supabase JWT verification.
-
-No network call is ever made to Supabase to validate a token - the
-signature, expiry, and subject are all checked locally using
-SUPABASE_JWT_SECRET, per the hard requirement to avoid the extra
-latency (and availability dependency) of a network round trip.
-"""
 from dataclasses import dataclass
 
 import jwt

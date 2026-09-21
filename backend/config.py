@@ -1,12 +1,3 @@
-"""
-Centralized backend configuration.
-
-Nothing in this file touches or modifies the existing engine. It only
-reads environment variables (from the repo-root .env, which already
-exists, is gitignored, and is never committed - so loading it here is
-not a change to the repository) and exposes typed settings for the
-rest of the backend package.
-"""
 import os
 from pathlib import Path
 

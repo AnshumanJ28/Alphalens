@@ -1,9 +1,3 @@
-"""
-Celery application. The authoritative concurrency lock is the process
-launch flag (celery -A backend.worker worker --concurrency=1); the
-settings below are a belt-and-suspenders in-code default, not a
-substitute for that flag.
-"""
 from celery import Celery
 
 from .config import settings

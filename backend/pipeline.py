@@ -1,26 +1,3 @@
-"""
-Thin, safe wrapper around the EXISTING Java/C++/Python research engine.
-
-This module never modifies Main.java, the C++ engine, or the Python
-scraper. It only:
-  1. invokes the existing CLI exactly as documented in the repo's own
-     README (`java -cp "java/bin:java/lib/*" Main <TICKER>`, run from
-     the repository root, since every engine path is CWD-relative),
-  2. reads the generationId the engine itself chose (Main.java
-     generates it internally - there is no CLI flag to inject one),
-     by parsing the "[OUTPUT_JSON] <path>" line it already prints, and
-  3. deletes only the files that belong to that exact generationId.
-
-One additional workaround lives here (see _ensure_cpp_binary_alias):
-Main.java hard-codes the C++ executable path as
-"cpp/build/Release/invest_pipeline.exe" (a Windows-style path). On a
-Linux build (Render, Docker, plain `cmake --build`), the actual output
-is "cpp/build/invest_pipeline" - no Release/ folder, no .exe suffix.
-Rather than edit Main.java, we create the exact path Java expects as a
-symlink (or copy) to the real binary the first time it's missing. This
-touches only cpp/build/, a build-output directory that is already
-gitignored and contains nothing checked into the repository.
-"""
 import re
 import shutil
 import subprocess
@@ -47,7 +24,7 @@ SECTOR_PEERS: dict[str, list[str]] = {
 
 
 def _resolve_peers(ticker: str) -> list[str]:
-    """Return up to 4 peer tickers for *ticker*, excluding itself."""
+    
     base = ticker.replace(".NS", "").replace(".BO", "")
     for _sector, members in SECTOR_PEERS.items():
         if base in members:
@@ -88,15 +65,7 @@ def _parse_generation_id(json_filename: str, fallback_ticker: str) -> tuple[str,
 
 
 def run_pipeline(ticker: str, skip_yahoo: bool = False) -> dict:
-    """
-    Runs the existing pipeline end-to-end for `ticker` and returns the
-    engine's own generationId plus the resulting file paths. Raises
-    PipelineError on any failure (non-zero exit, timeout, or missing
-    OUTPUT_JSON marker).
-
-    When skip_yahoo is True, passes --skip-yahoo to the Java orchestrator
-    so it bypasses the Python Yahoo scrape and uses cached data instead.
-    """
+    
     project_root = settings.JAVA_PROJECT_PATH
     _ensure_cpp_binary_alias(project_root)
 
@@ -157,19 +126,7 @@ def run_pipeline(ticker: str, skip_yahoo: bool = False) -> dict:
 
 
 def cleanup_generation(generation_id: str, ticker: str, keep_final_pdf: bool = False) -> None:
-    """
-    Deletes ONLY the files that belong to this exact generationId:
-      - json/{generationId}_yf_temp.json
-      - json/{generationId}_news_temp.json
-      - json/{generationId}_peers_temp.json
-      - reports/{ticker}_{generationId}.json
-      - reports/{ticker}_{generationId}.pdf   (unless keep_final_pdf)
-
-    Never touches cpp/invest.sqlite, cache/, json/yf_temp.json (a
-    shared, non-generation-scoped file the engine overwrites itself),
-    or any other ticker's/generation's files - including the sample
-    PDFs already committed under reports/.
-    """
+    
     if not generation_id:
         return
 

@@ -1,13 +1,3 @@
-"""
-FastAPI web wrapper around the existing research engine.
-
-Flow for POST /api/search:
-    JWT verification -> ticker normalization -> ticker set membership
-    check -> Celery task queued -> task_id returned immediately.
-
-The HTTP request path never runs Java/C++ directly; only the Celery
-worker (backend.worker.run_research_task) does that.
-"""
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path

@@ -1,12 +1,3 @@
-"""
-Celery task + task metadata store.
-
-Per the "do not build a second database" constraint, task state
-(status, ownership, generationId, result path) lives entirely in
-Redis - the same broker already required for Celery. This also lets
-GET /api/status/{task_id} answer instantly even for a task that is
-still PENDING and hasn't been picked up by the worker yet.
-"""
 import json
 import time
 from datetime import datetime, timezone, timedelta
@@ -28,7 +19,7 @@ def _cache_key(ticker: str) -> str:
 
 
 def _seconds_until_next_9am_ist() -> int:
-    """Return the number of seconds from now until the next 9:00 AM IST."""
+    
     now = datetime.now(IST)
     next_9am = now.replace(hour=9, minute=0, second=0, microsecond=0)
     if now >= next_9am:
@@ -37,13 +28,13 @@ def _seconds_until_next_9am_ist() -> int:
 
 
 def mark_ticker_cached(ticker: str) -> None:
-    """Mark a ticker as cached in Redis, expiring at the next 9:00 AM IST."""
+    
     ttl = _seconds_until_next_9am_ist()
     redis_client.set(_cache_key(ticker), "1", ex=ttl)
 
 
 def is_ticker_cached(ticker: str) -> bool:
-    """Check if a ticker has valid cached data (generated after the last 9 AM)."""
+    
     return redis_client.exists(_cache_key(ticker)) == 1
 
 
