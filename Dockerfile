@@ -1,0 +1,56 @@
+# Use Ubuntu as the base to easily get Java, Python, and C++ compilers
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    openjdk-21-jdk \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    redis-server \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Setup Python virtual environment
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire project
+COPY . .
+
+# Build the C++ Engine
+WORKDIR /app/cpp
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+RUN cmake --build build --config Release
+
+# Move back to root
+WORKDIR /app
+
+# Compile Java Orchestrator
+RUN javac -cp "java/lib/*" -d java/bin java/src/*.java
+
+# Ensure the script is executable
+RUN chmod +x start.sh
+
+# Ensure the database doesn't get reset if mounted, but provide a default location
+VOLUME ["/app/cpp"]
+
+# Set the entrypoint to the start script
+# We run Uvicorn with exactly 1 worker to strictly respect the 512MB RAM limit
+ENTRYPOINT ["./start.sh"]
