@@ -23,9 +23,6 @@ redis_client = redis_lib.Redis.from_url(settings.REDIS_URL, decode_responses=Tru
 IST = timezone(timedelta(hours=5, minutes=30))
 
 
-# ---------------------------------------------------------------------------
-# 9:00 AM IST Cache Registry
-# ---------------------------------------------------------------------------
 def _cache_key(ticker: str) -> str:
     return f"ticker_cache:{ticker}"
 
@@ -50,9 +47,6 @@ def is_ticker_cached(ticker: str) -> bool:
     return redis_client.exists(_cache_key(ticker)) == 1
 
 
-# ---------------------------------------------------------------------------
-# Task metadata (Redis)
-# ---------------------------------------------------------------------------
 def _meta_key(task_id: str) -> str:
     return f"task_meta:{task_id}"
 
@@ -88,9 +82,6 @@ def _update_task_record(task_id: str, **fields) -> None:
     redis_client.set(_meta_key(task_id), json.dumps(record), ex=settings.TASK_TTL_SECONDS)
 
 
-# ---------------------------------------------------------------------------
-# Shared pipeline execution logic
-# ---------------------------------------------------------------------------
 def _run_task(task_id: str, user_id: str, ticker: str, skip_yahoo: bool) -> dict:
     _update_task_record(task_id, status="PROCESSING")
 
@@ -109,7 +100,6 @@ def _run_task(task_id: str, user_id: str, ticker: str, skip_yahoo: bool) -> dict
     except Exception:
         pass  # cleanup failures must never mask a successful pipeline run
 
-    # Mark this ticker as cached so subsequent requests use the fast queue
     mark_ticker_cached(ticker)
 
     _update_task_record(
@@ -121,17 +111,11 @@ def _run_task(task_id: str, user_id: str, ticker: str, skip_yahoo: bool) -> dict
     return {"status": "COMPLETED", "generation_id": generation_id}
 
 
-# ---------------------------------------------------------------------------
-# Fast Queue: Yahoo data is cached, skip tricker.py (~2 seconds)
-# ---------------------------------------------------------------------------
 @celery_app.task(name="backend.worker.run_research_task_fast", bind=True)
 def run_research_task_fast(self, task_id: str, user_id: str, ticker: str) -> dict:
     return _run_task(task_id, user_id, ticker, skip_yahoo=True)
 
 
-# ---------------------------------------------------------------------------
-# Slow Queue: Full pipeline with Yahoo scrape (~11 seconds)
-# ---------------------------------------------------------------------------
 @celery_app.task(name="backend.worker.run_research_task_slow", bind=True)
 def run_research_task_slow(self, task_id: str, user_id: str, ticker: str) -> dict:
     return _run_task(task_id, user_id, ticker, skip_yahoo=False)

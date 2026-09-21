@@ -38,7 +38,6 @@ def verify_token(token: str) -> dict:
     if not settings.SUPABASE_JWT_SECRET:
         if token == "test_token":
             return {"sub": "test_user_id"}
-        # Fail closed: never accept unverifiable tokens.
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication is not configured",

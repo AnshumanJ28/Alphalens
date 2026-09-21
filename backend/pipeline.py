@@ -32,14 +32,6 @@ from .config import settings
 
 _OUTPUT_JSON_RE = re.compile(r"^\[OUTPUT_JSON\]\s*(.+)$")
 
-# ---------------------------------------------------------------------------
-# Dynamic peer resolution
-# ---------------------------------------------------------------------------
-# This mapping mirrors (and extends) the hardcoded SECTOR_PEERS inside
-# ApiFetcher.java.  When the backend invokes the pipeline it resolves peers
-# here and passes them as extra CLI arguments so that Java uses them instead
-# of its own static map — making the peer set easy to update without
-# recompiling Java.
 SECTOR_PEERS: dict[str, list[str]] = {
     "IT":       ["TCS", "INFY", "WIPRO", "HCLTECH", "TECHM", "LTIM"],
     "BANKS":    ["HDFCBANK", "ICICIBANK", "SBIN", "KOTAKBANK", "AXISBANK"],
@@ -88,8 +80,6 @@ def _ensure_cpp_binary_alias(project_root: Path) -> None:
 
 
 def _parse_generation_id(json_filename: str, fallback_ticker: str) -> tuple[str, str]:
-    # Existing naming convention (cpp/src/json_snapshot_writer.cpp):
-    # "{TICKER}_{generationId}.json"
     stem = json_filename[:-5] if json_filename.endswith(".json") else json_filename
     if "_" in stem:
         ticker_part, gen_id = stem.rsplit("_", 1)

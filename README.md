@@ -28,25 +28,25 @@ While the modern trend is to throw Large Language Models (LLMs) at every data pr
 
 This guarantees 100% mathematical accuracy, zero hallucinations, and sub-12 second generation times across the entire stack.
 
-### Master Architecture Diagram
+### Architecture Diagram
 Here is how the entire polyglot system fits together:
 
 ```mermaid
 flowchart TD
-    User([User Request]) --> API[Python FastAPI Web Server]
-    API --> Queue{Redis Queue\nFast vs Slow Lane}
+    User([User Request]) --> API["Python FastAPI Web Server"]
+    API --> Queue{"Redis Queue<br>Fast vs Slow Lane"}
     
-    Queue --> Java[Java Orchestrator]
-    Java -->|1. Spawns Scrapers| Heist[Python Stealth Scrapers]
+    Queue --> Java["Java Orchestrator"]
+    Java -->|1. Spawns Scrapers| Heist["Python Stealth Scrapers"]
     Heist -->|JSON Data| Java
     
-    Java -->|2. Pipes JSON| Cpp[C++ Core Engine]
-    Cpp <--> CMath[C Hardware SIMD Math]
-    Cpp <--> Lex[Loughran-McDonald Lexicon]
-    Cpp <--> SQL[(SQLite Storage)]
+    Java -->|2. Pipes JSON| Cpp["C++ Core Engine"]
+    Cpp <--> CMath["C Hardware SIMD Math"]
+    Cpp <--> Lex["Loughran-McDonald Lexicon"]
+    Cpp <--> SQL[("SQLite Storage")]
     Cpp -->|3. Returns Markdown| Java
     
-    Java -->|4. Native Java Renderer| PDF[Final PDF Report]
+    Java -->|4. Native Java Renderer| PDF["Final PDF Report"]
 ```
 
 ---
@@ -64,11 +64,11 @@ C++ offers raw execution speed and zero-garbage-collection overhead, eliminating
 
 ```mermaid
 flowchart LR
-    RawJSON[Raw JSON] --> Parser[C++ JSON Parser]
-    Parser --> SQLite[(SQLite\nTables)]
-    SQLite --> SIMD[C SIMD Math\n(Ratios)]
-    SQLite --> Lexicon[Loughran-McDonald\n(Sentiment)]
-    SIMD --> Markdown[Markdown Generator]
+    RawJSON["Raw JSON"] --> Parser["C++ JSON Parser"]
+    Parser --> SQLite[("SQLite<br>Tables")]
+    SQLite --> SIMD["C SIMD Math<br>(Ratios)"]
+    SQLite --> Lexicon["Loughran-McDonald<br>(Sentiment)"]
+    SIMD --> Markdown["Markdown Generator"]
     Lexicon --> Markdown
 ```
 
@@ -122,15 +122,15 @@ Python is the undisputed king of web APIs and network scraping. FastAPI and Cele
 
 ```mermaid
 flowchart TD
-    User([User Request]) --> API[FastAPI Web Server]
-    API --> Cache{Redis Cache\nLookup}
+    User([User Request]) --> API["FastAPI Web Server"]
+    API --> Cache{"Redis Cache<br>Lookup"}
     
-    Cache -- Valid Cache\n(Skip Scraping) --> FQ[Celery Fast Queue]
-    Cache -- No Cache\n(Full Scrape) --> SQ[Celery Slow Queue]
+    Cache -- "Valid Cache<br>(Skip Scraping)" --> FQ["Celery Fast Queue"]
+    Cache -- "No Cache<br>(Full Scrape)" --> SQ["Celery Slow Queue"]
     
-    FQ --> Java[Trigger Java Orchestrator\n--skip-yahoo]
-    SQ --> Java[Trigger Java Orchestrator\nFull Fetch]
-    Java --> Heist[Python Stealth Scrapers]
+    FQ --> Java["Trigger Java Orchestrator<br>--skip-yahoo"]
+    SQ --> Java["Trigger Java Orchestrator<br>Full Fetch"]
+    Java --> Heist["Python Stealth Scrapers"]
 ```
 
 ---

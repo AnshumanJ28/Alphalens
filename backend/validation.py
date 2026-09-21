@@ -61,14 +61,12 @@ def load_valid_tickers(csv_path: Optional[str] = None) -> set[str]:
         name_field = _find_field(reader.fieldnames, "NAME OF COMPANY")
 
         if not symbol_field:
-            # Fall back to the first column
             symbol_field = reader.fieldnames[0] if reader.fieldnames else None
 
         for row in reader:
             symbol = (row.get(symbol_field) or "").strip().upper() if symbol_field else ""
             if symbol:
                 tickers.add(f"{symbol}.NS")
-                # Map company name to symbol for fuzzy resolution
                 if name_field:
                     name = (row.get(name_field) or "").strip()
                     if name:
@@ -91,16 +89,13 @@ def _resolve_name_to_ticker(raw: str) -> Optional[str]:
     if not query:
         return None
 
-    # 1. Exact match
     if query in _NAME_TO_SYMBOL:
         return f"{_NAME_TO_SYMBOL[query]}.NS"
 
-    # 2. Prefix match (starts with)
     for name, symbol in _NAME_TO_SYMBOL.items():
         if name.startswith(query):
             return f"{symbol}.NS"
 
-    # 3. Partial substring match
     for name, symbol in _NAME_TO_SYMBOL.items():
         if query in name:
             return f"{symbol}.NS"
@@ -119,18 +114,15 @@ def normalize_ticker(raw: str) -> str:
 
     cleaned = raw.strip().upper()
 
-    # Direct ticker match (with or without .NS suffix)
     if cleaned in _VALID_TICKERS:
         return cleaned
     if f"{cleaned}.NS" in _VALID_TICKERS:
         return f"{cleaned}.NS"
 
-    # Try name-to-ticker resolution
     resolved = _resolve_name_to_ticker(raw)
     if resolved:
         return resolved
 
-    # Return the cleaned input as-is; is_valid_ticker will reject it
     return cleaned
 
 

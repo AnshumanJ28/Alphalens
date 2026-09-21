@@ -33,7 +33,6 @@ from .worker import (
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # Loaded exactly once; every request afterwards is an O(1) set check.
     validation.load_valid_tickers()
     yield
 
@@ -65,8 +64,6 @@ class StatusResponse(BaseModel):
 
 def _get_owned_record(task_id: str, user: AuthenticatedUser) -> dict:
     record = get_task_record(task_id)
-    # Same 404 whether the task doesn't exist or belongs to someone
-    # else - never reveal that a task_id belongs to another user.
     if record is None or record["user_id"] != user.user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return record
@@ -89,8 +86,6 @@ def search(
 
     task_id = str(uuid.uuid4())
 
-    # Route to the fast queue if the ticker has been fetched since 9:00 AM IST,
-    # otherwise use the slow queue which runs the full Yahoo scrape.
     task_func = run_research_task_fast if is_ticker_cached(ticker) else run_research_task_slow
 
     try:
@@ -102,7 +97,6 @@ def search(
             detail="Could not queue the search right now",
         )
 
-    # Fire-and-forget: never blocks the response below.
     background_tasks.add_task(database.log_search, user.user_id, ticker, user.raw_token)
 
     return SearchResponse(task_id=task_id)
@@ -129,8 +123,6 @@ def get_result(task_id: str, user: AuthenticatedUser = Depends(get_current_user)
 
     data = pdf_path.read_bytes()
 
-    # Deliver, then clean up: the PDF and metadata are no longer needed
-    # once the frontend has actually received the file.
     pipeline.cleanup_generation(record["generation_id"], record["ticker"], keep_final_pdf=False)
     delete_task_record(task_id)
 

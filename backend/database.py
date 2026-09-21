@@ -30,6 +30,4 @@ def log_search(user_id: str, ticker: str, user_jwt: str) -> None:
             {"user_id": user_id, "ticker": ticker}
         ).execute()
     except Exception:
-        # Logging is best-effort only; it must never affect the
-        # primary request -> validate -> queue -> respond path.
         pass
