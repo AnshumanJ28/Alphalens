@@ -59,6 +59,10 @@ def fetch_single_ticker(ticker, session):
                 })
         except Exception as e:
             print(f"  [Tricker] FMP error: {e}")
+            
+        # Clean up if FMP failed to populate data
+        if not data["alpha_vantage"]["INCOME_STATEMENT"]["annualReports"]:
+            del data["alpha_vantage"]
 
     # 1. Fetch Alpha Vantage if key is available (Bypasses Yahoo Finance Cloudflare Blocks)
     av_key = os.getenv("ALPHAVANTAGE_KEY")
