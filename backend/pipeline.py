@@ -68,6 +68,8 @@ def run_pipeline(ticker: str, skip_yahoo: bool = False) -> dict:
     
     project_root = settings.JAVA_PROJECT_PATH
     _ensure_cpp_binary_alias(project_root)
+    
+    settings.PIPELINE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     peers = _resolve_peers(ticker)
 
