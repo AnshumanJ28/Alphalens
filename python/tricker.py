@@ -57,7 +57,14 @@ def fetch_single_ticker(ticker, session):
         print(f"  [Tricker] WARNING: Could not fetch financial statements for {ticker} from any source.")
     return ticker, data
 def fetch_yahoo_data(generation_id, tickers):
-    session = requests.Session(impersonate="chrome120")
+    scraper_key = os.getenv("SCRAPER_API_KEY")
+    proxies = None
+    if scraper_key:
+        print("  [Tricker] Using ScraperAPI proxy to bypass Cloudflare...")
+        proxy_url = f"http://scraperapi:{scraper_key}@proxy-server.scraperapi.com:8001"
+        proxies = {"http": proxy_url, "https": proxy_url}
+        
+    session = requests.Session(impersonate="chrome120", proxies=proxies)
     try: session.get("https://fc.yahoo.com", timeout=10)
     except: pass
     os.makedirs("json", exist_ok=True)
