@@ -398,7 +398,11 @@ int main(int argc, char* argv[]) {
         try {
             json unified = json::parse(unified_json_str);
             if (unified.contains("yfinance") && !unified["yfinance"].is_null()) {
+                json yf = unified["yfinance"];
                 statements = parse_yfinance_json(unified["yfinance"]);
+                if (statements.empty()) {
+                    std::cerr << "  [WARNING] Financial statements missing in unified data." << std::endl;
+                }
                 try {
                     auto result = unified["yfinance"]["quoteSummary"]["result"][0];
                     if (result.contains("defaultKeyStatistics") && result["defaultKeyStatistics"].contains("industry")) {
