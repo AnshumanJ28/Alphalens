@@ -287,6 +287,13 @@ block-beta
     class D1,D2 chitrangi
     class E1,E2 om
     class F1,F2 harshit
+
+    click A1 href "https://github.com/AnshumanJ28" "GitHub Profile"
+    click B1 href "https://github.com/ShubhangiRoy12" "GitHub Profile"
+    click C1 href "https://github.com/pujaux" "GitHub Profile"
+    click D1 href "https://github.com/ChitrangiS" "GitHub Profile"
+    click E1 href "https://github.com/omroy07" "GitHub Profile"
+    click F1 href "https://github.com/jaiswalharshit9792" "GitHub Profile"
 ```
 
 ---
