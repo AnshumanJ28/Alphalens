@@ -18,6 +18,7 @@ from .worker import (
     is_ticker_cached,
     run_research_task_fast,
     run_research_task_slow,
+    redis_client,
 )
 
 
@@ -96,6 +97,18 @@ def search(
 def get_status(task_id: str, user: AuthenticatedUser = Depends(get_current_user)) -> StatusResponse:
     record = _get_owned_record(task_id, user)
     return StatusResponse(task_id=task_id, status=record["status"], error=record.get("error"))
+
+
+@app.get("/api/clear_cache")
+def clear_cache():
+    try:
+        redis_client.flushall()
+        import shutil
+        if Path("cache").exists():
+            shutil.rmtree("cache")
+        return {"status": "success", "message": "Redis and disk cache completely cleared!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/result/{task_id}")
