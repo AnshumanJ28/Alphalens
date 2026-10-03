@@ -11,6 +11,55 @@ def fetch_single_ticker(ticker, session):
     url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules={modules}&crumb={crumb}"
     data = {}
     
+    # 0. Fetch FMP if key is available
+    fmp_key = os.getenv("FMP_API_KEY")
+    if fmp_key:
+        print(f"  [Tricker] Using FMP for {ticker} financials...")
+        data["alpha_vantage"] = {
+            "INCOME_STATEMENT": {"annualReports": []},
+            "BALANCE_SHEET": {"annualReports": []},
+            "CASH_FLOW": {"annualReports": []}
+        }
+        try:
+            # Income Statement
+            r_inc = requests.get(f"https://financialmodelingprep.com/api/v3/income-statement/{ticker}?limit=1&apikey={fmp_key}", timeout=10)
+            if r_inc.status_code == 200 and r_inc.json():
+                inc_data = r_inc.json()[0]
+                data["alpha_vantage"]["INCOME_STATEMENT"]["annualReports"].append({
+                    "totalRevenue": str(inc_data.get("revenue", "None")),
+                    "grossProfit": str(inc_data.get("grossProfit", "None")),
+                    "operatingIncome": str(inc_data.get("operatingIncome", "None")),
+                    "netIncome": str(inc_data.get("netIncome", "None")),
+                    "ebitda": str(inc_data.get("ebitda", "None")),
+                    "interestAndDebtExpense": str(inc_data.get("interestExpense", "None")),
+                    "incomeBeforeTax": str(inc_data.get("incomeBeforeTax", "None"))
+                })
+            # Balance Sheet
+            r_bs = requests.get(f"https://financialmodelingprep.com/api/v3/balance-sheet-statement/{ticker}?limit=1&apikey={fmp_key}", timeout=10)
+            if r_bs.status_code == 200 and r_bs.json():
+                bs_data = r_bs.json()[0]
+                data["alpha_vantage"]["BALANCE_SHEET"]["annualReports"].append({
+                    "totalAssets": str(bs_data.get("totalAssets", "None")),
+                    "totalLiabilities": str(bs_data.get("totalLiabilities", "None")),
+                    "totalCurrentAssets": str(bs_data.get("totalCurrentAssets", "None")),
+                    "totalCurrentLiabilities": str(bs_data.get("totalCurrentLiabilities", "None")),
+                    "inventory": str(bs_data.get("inventory", "None")),
+                    "shortLongTermDebtTotal": str(bs_data.get("totalDebt", "None")),
+                    "totalShareholderEquity": str(bs_data.get("totalStockholdersEquity", "None")),
+                    "retainedEarnings": str(bs_data.get("retainedEarnings", "None")),
+                    "cashAndCashEquivalentsAtCarryingValue": str(bs_data.get("cashAndCashEquivalents", "None"))
+                })
+            # Cash Flow
+            r_cf = requests.get(f"https://financialmodelingprep.com/api/v3/cash-flow-statement/{ticker}?limit=1&apikey={fmp_key}", timeout=10)
+            if r_cf.status_code == 200 and r_cf.json():
+                cf_data = r_cf.json()[0]
+                data["alpha_vantage"]["CASH_FLOW"]["annualReports"].append({
+                    "operatingCashflow": str(cf_data.get("operatingCashFlow", "None")),
+                    "capitalExpenditures": str(cf_data.get("capitalExpenditure", "None"))
+                })
+        except Exception as e:
+            print(f"  [Tricker] FMP error: {e}")
+
     # 1. Fetch Alpha Vantage if key is available (Bypasses Yahoo Finance Cloudflare Blocks)
     av_key = os.getenv("ALPHAVANTAGE_KEY")
     if av_key:
