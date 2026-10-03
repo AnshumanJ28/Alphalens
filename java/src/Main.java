@@ -68,5 +68,3 @@ public class Main {
         return jsonPath;
     }
 }
-    }
-}
