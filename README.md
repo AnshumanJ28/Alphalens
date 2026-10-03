@@ -1,16 +1,23 @@
-# Investment Research Ingestion & Analysis Pipeline
+# AlphaLens
 
 <div align="center">
 
 ![PyTorch/TF](https://img.shields.io/badge/PYTORCH%20/%20TENSORFLOW-NOT%20USED-grey?style=for-the-badge)
 ![LLMs](https://img.shields.io/badge/LLMs-NOT%20USED-grey?style=for-the-badge)
+![React](https://img.shields.io/badge/REACT-18-blue?style=for-the-badge&logo=react&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JAVASCRIPT-ES6%2B-yellow?style=for-the-badge&logo=javascript&logoColor=black)
+![Node.js](https://img.shields.io/badge/NODE.JS-20-green?style=for-the-badge&logo=node.js&logoColor=white)
+![HTML5](https://img.shields.io/badge/HTML5-STRUCT-orange?style=for-the-badge&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-STYLE-blue?style=for-the-badge&logo=css3&logoColor=white)
 ![C++20](https://img.shields.io/badge/C++-20-blue?style=for-the-badge&logo=c%2B%2B&logoColor=white)
+![C](https://img.shields.io/badge/C-SIMD%20MATH-blue?style=for-the-badge&logo=c&logoColor=white)
 ![Java 22](https://img.shields.io/badge/JAVA-22-orange?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Python 3](https://img.shields.io/badge/PYTHON-3.10+-red?style=for-the-badge&logo=python&logoColor=white)
-![C](https://img.shields.io/badge/C-SIMD%20MATH-blue?style=for-the-badge&logo=c&logoColor=white)
 ![SQL](https://img.shields.io/badge/SQL-SUPABASE%20%26%20SQLITE-green?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/REDIS-CACHE%20%26%20BROKER-red?style=for-the-badge&logo=redis&logoColor=white)
+![Celery](https://img.shields.io/badge/CELERY-TASK%20QUEUE-lightgreen?style=for-the-badge&logo=celery&logoColor=black)
+![Docker](https://img.shields.io/badge/DOCKER-CONTAINER-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/LICENSE-APACHE%202.0-yellow?style=for-the-badge)
-![Render](https://img.shields.io/badge/RENDER-FREE%20TIER-purple?style=for-the-badge&logo=render&logoColor=white)
 
 > An ultra-low latency, hardware-accelerated pipeline that automates equity research for Indian-listed companies (NSE/BSE) — pulling financials and news, then computing ratios, sentiment, and peer comparisons, all the way toward a pristine PDF investment memo in under 12 seconds.
 
@@ -135,7 +142,28 @@ flowchart TD
 
 ---
 
-## 5. The Databases (SQL)
+## 5. The Frontend (JavaScript, React, Node.js, HTML, CSS)
+
+### Detailed Working
+The user-facing web interface is built using modern **React** (JavaScript), structured with **HTML5**, and styled via **CSS3**. Node.js is utilized for package management and building the frontend assets.
+- **Interactive Dashboard:** Users can search for Indian stock tickers, view live queue statuses via polling the Python FastAPI backend, and download their finalized PDF reports.
+- **Responsive UI:** The CSS ensures the application is completely accessible across mobile and desktop devices.
+
+### Why this Language?
+JavaScript and React are the industry standards for building dynamic, reactive user interfaces in the browser. They excel at managing UI states and rendering components efficiently.
+
+### Why not shift everything to JavaScript/Node.js?
+While Node.js is incredibly popular for full-stack development, using it for this entire pipeline **cannot be the solution**.
+- **CPU Bottlenecks:** Node.js runs on a single-threaded event loop. If we attempted to process the massive financial JSON payloads and calculate SIMD-level math in V8 (JavaScript), it would block the entire server for seconds, destroying concurrency.
+- **Process Orchestration:** Node.js lacks the robust, low-level multi-threaded child-process management that Java provides. Java orchestrates the Python scrapers and C++ binaries far more efficiently without memory leaks.
+- **Precision:** Financial calculations require strict static typing and exact memory allocation to avoid floating-point errors, which JavaScript's dynamic Number type struggles to guarantee at high speeds compared to C++.
+
+---
+
+## 6. The Databases (SQL)
+
+> [!WARNING]
+> **Supabase / PostgreSQL Limitations:** The production Supabase database integration is currently broken. Due to the very strict connection limits on the Supabase free tier, the PostgreSQL database gets overwhelmed quickly, causing analytics recording to fail.
 
 To ensure maximum performance and user tracking, the system splits its database responsibilities across two vastly different SQL paradigms:
 
@@ -152,7 +180,7 @@ To ensure maximum performance and user tracking, the system splits its database 
 
 ---
 
-## 6. Benchmark Results (Render Free Tier)
+## 7. Benchmark Results (Render Free Tier)
 
 This entire polyglot architecture operates within a strict **512MB RAM and 0.1 vCPU** limit on the Render Free Tier. To survive the memory constraints, we restricted Celery concurrency to `1` worker. 
 
@@ -175,7 +203,7 @@ We ran a batch stress test where all **10 Indian IT and Bank tickers were trigge
 
 ---
 
-## 7. Project Structure
+## 8. Project Structure
 
 This is the full intended structure for the project.
 
@@ -214,6 +242,12 @@ This is the full intended structure for the project.
 ├── python/                     [DONE]  The Facade (Network Scripts)
 │   └── tricker.py                Lightweight python network I/O script (The Heist)
 │
+├── frontend/                   [DONE]  The User Interface (React, Vite)
+│   ├── src/                          React components and pages
+│   ├── public/                       Static assets
+│   ├── package.json                  Node dependencies
+│   └── vite.config.js                Vite bundler configuration
+│
 ├── reports/                    [AUTO]  Output directory for `.pdf` files
 ├── invest.sqlite               [AUTO]  Embedded local database
 ├── requirements.txt
@@ -224,9 +258,45 @@ This is the full intended structure for the project.
 
 ---
 
-## 8. Quick Start (Render Free Tier Compatible!)
+## 9. Credits
 
-### Option A: Run with Docker (Recommended)
+```mermaid
+block-beta
+    columns 2
+    H1["<b>Team Member</b>"] H2["<b>Role / Contribution</b>"]
+    
+    A1["Anshuman Pandey"] A2["C &amp; C++ Core Engine, System Design, and Multi-Tier Caching Architecture"]
+    B1["Shubhangi Roy"] B2["Initial RAG Implementation (Legacy) &amp; Java Orchestrator (Modern)"]
+    C1["Puja Rani"] C2["Frontend Development"]
+    D1["Chitrangi Samal"] D2["FastAPI Backend, Redis/Celery Queuing, &amp; Database Architecture"]
+    E1["Om Roy"] E2["Python Stealth Scrapers"]
+    F1["Harshit Jaswal"] F2["PDF Template Design, PDF Data Injection, &amp; Python SQLite Integration"]
+    
+    space:2
+
+    classDef anshuman fill:transparent,stroke:#3b82f6,stroke-width:2px
+    classDef shubhangi fill:transparent,stroke:#ec4899,stroke-width:2px
+    classDef puja fill:transparent,stroke:#eab308,stroke-width:2px
+    classDef chitrangi fill:transparent,stroke:#22c55e,stroke-width:2px
+    classDef om fill:transparent,stroke:#a855f7,stroke-width:2px
+    classDef harshit fill:transparent,stroke:#f97316,stroke-width:2px
+
+    class A1,A2 anshuman
+    class B1,B2 shubhangi
+    class C1,C2 puja
+    class D1,D2 chitrangi
+    class E1,E2 om
+    class F1,F2 harshit
+```
+
+---
+
+## 10. Quick Start (Docker Deployment)
+
+> [!WARNING]
+> **Cloud Deployments (Render) are currently BROKEN:** While this system is optimized to survive the memory constraints of free cloud tiers, deploying it purely with free tools on Render or other clouds simply won't work out of the box. Yahoo Finance actively blocks IPs from known data centers, and even paid proxy services frequently fail. To deploy this to the web successfully, you must run the backend on a local machine (residential IP) and expose it using **Cloudflare Tunnels**. Therefore, we highly recommend running this locally via Docker!
+
+### Option A: Local Setup via Docker (Recommended)
 You can build and run the entire pipeline in an isolated container without installing C++ compilers or Python dependencies locally.
 
 ```bash
