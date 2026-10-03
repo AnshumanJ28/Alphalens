@@ -10,10 +10,27 @@ def fetch_single_ticker(ticker, session):
     crumb = crumb_resp.text.strip()
     url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules={modules}&crumb={crumb}"
     data = {}
+    
+    # 1. Fetch Alpha Vantage if key is available (Bypasses Yahoo Finance Cloudflare Blocks)
+    av_key = os.getenv("ALPHAVANTAGE_KEY")
+    if av_key:
+        print(f"  [Tricker] Using Alpha Vantage for {ticker} financials...")
+        data["alpha_vantage"] = {}
+        for func in ["INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW"]:
+            try:
+                av_url = f"https://www.alphavantage.co/query?function={func}&symbol={ticker}&apikey={av_key}"
+                r = requests.get(av_url, timeout=10)
+                if r.status_code == 200:
+                    data["alpha_vantage"][func] = r.json()
+            except Exception as e:
+                print(f"  [Tricker] AV {func} error: {e}")
+
+    # 2. Fetch Yahoo quoteSummary
     try:
         resp = session.get(url, timeout=15)
         if resp.status_code == 200:
-            data = resp.json()
+            yf_data = resp.json()
+            data.update(yf_data)
     except: pass
     try:
         yf_ticker = yf.Ticker(ticker, session=session)
@@ -28,8 +45,16 @@ def fetch_single_ticker(ticker, session):
         cf = yf_ticker.cashflow
         if not cf.empty:
             data["modern_cashflow"] = {"latest": cf.iloc[:, 0].dropna().to_dict()}
+            
     except Exception as e:
         print(f"  [Tricker] Error getting yfinance data for {ticker}: {e}")
+        
+    # Validation: If we have no AV data and no YF data, it's totally empty
+    has_av = "alpha_vantage" in data and "INCOME_STATEMENT" in data["alpha_vantage"]
+    has_yf = "modern_income_stmt" in data
+    
+    if not has_av and not has_yf:
+        print(f"  [Tricker] WARNING: Could not fetch financial statements for {ticker} from any source.")
     return ticker, data
 def fetch_yahoo_data(generation_id, tickers):
     session = requests.Session(impersonate="chrome120")
@@ -45,6 +70,12 @@ def fetch_yahoo_data(generation_id, tickers):
             try:
                 t, data = future.result()
                 if ticker == tickers[0]:
+                    has_av = "alpha_vantage" in data and "INCOME_STATEMENT" in data["alpha_vantage"]
+                    has_yf = "modern_income_stmt" in data
+                    
+                    if not has_av and not has_yf:
+                        print(f"  [Tricker] FATAL: Failed to download financial statements for {ticker} (Yahoo Finance may be blocking the IP).")
+                        sys.exit(1)
                     with open(f"json/{generation_id}_yf_temp.json", "w", encoding="utf-8") as f:
                         json.dump(data, f)
                     os.makedirs(f"cache/{ticker}", exist_ok=True)
