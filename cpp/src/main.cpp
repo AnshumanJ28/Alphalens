@@ -60,10 +60,10 @@ bool env_flag_enabled(const std::map<std::string, std::string>& env, const std::
 }
 std::string find_project_root() {
     for (const auto& candidate : {".", "..", "../..", "../../.."}) {
-        std::string test = std::string(candidate) + "/.env";
+        std::string test = std::string(candidate) + "/backend/config.py";
         if (std::ifstream(test).good()) return candidate;
     }
-    return ".."; 
+    return "."; 
 }
 std::string find_env_path() {
     for (const auto& candidate : {".env", "../.env", "../../.env"}) {
@@ -335,10 +335,14 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "=== Running C++ Analysis Pipeline for " << ticker << " ===" << std::endl;
     auto env = load_env(find_env_path());
-    if (env.find("NEWSAPI_KEY") == env.end()) {
-        std::cerr << "[ERROR] Could not find NEWSAPI_KEY in .env file." << std::endl;
+    std::string news_api_key;
+    if (env.find("NEWSAPI_KEY") != env.end()) {
+        news_api_key = env["NEWSAPI_KEY"];
+    } else if (std::getenv("NEWSAPI_KEY") != nullptr) {
+        news_api_key = std::getenv("NEWSAPI_KEY");
+    } else {
+        std::cerr << "[ERROR] Could not find NEWSAPI_KEY in .env file or OS environment." << std::endl;
     }
-    std::string news_api_key = env["NEWSAPI_KEY"];
     std::string project_root = find_project_root();
     std::string db_path = project_root + "/cpp/invest.sqlite";
     Storage storage(db_path);
