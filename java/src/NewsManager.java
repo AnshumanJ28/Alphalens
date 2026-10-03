@@ -27,17 +27,19 @@ public class NewsManager {
         }
 
         System.out.println("  [Java/NewsManager] Starting NewsAPI ingestion for " + ticker);
-        String apiKey = null;
-        try {
-            List<String> lines = Files.readAllLines(Path.of(".env"));
-            for (String line : lines) {
-                if (line.startsWith("NEWSAPI_KEY=")) {
-                    apiKey = line.split("=")[1].trim();
-                    break;
+        String apiKey = System.getenv("NEWSAPI_KEY");
+        if (apiKey == null || apiKey.isEmpty()) {
+            try {
+                List<String> lines = Files.readAllLines(Path.of(".env"));
+                for (String line : lines) {
+                    if (line.startsWith("NEWSAPI_KEY=")) {
+                        apiKey = line.split("=")[1].trim();
+                        break;
+                    }
                 }
+            } catch (Exception e) {
+                System.err.println("  [Java/NewsManager] Could not read .env file: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("  [Java/NewsManager] Could not read .env file: " + e.getMessage());
         }
         if (apiKey == null || apiKey.isEmpty()) {
             System.out.println("  [Java/NewsManager] No NEWSAPI_KEY found, skipping news.");

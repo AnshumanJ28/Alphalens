@@ -18,9 +18,11 @@ def fetch_single_ticker(ticker, session):
     try:
         yf_ticker = yf.Ticker(ticker, session=session)
         bs = yf_ticker.balance_sheet
+        print(f"  [Tricker] balance_sheet empty: {bs.empty}")
         if not bs.empty:
             data["modern_balance_sheet"] = {"latest": bs.iloc[:, 0].dropna().to_dict()}
         inc = yf_ticker.income_stmt
+        print(f"  [Tricker] income_stmt empty: {inc.empty}")
         if not inc.empty:
             data["modern_income_stmt"] = {"latest": inc.iloc[:, 0].dropna().to_dict()}
         cf = yf_ticker.cashflow

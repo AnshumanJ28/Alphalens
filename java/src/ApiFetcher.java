@@ -66,7 +66,8 @@ public class ApiFetcher {
             }
         }
         List<String> cmd = new ArrayList<>();
-        cmd.add("python");
+        String pythonBin = System.getenv("VIRTUAL_ENV") != null ? System.getenv("VIRTUAL_ENV") + "/bin/python" : "python3";
+        cmd.add(pythonBin);
         cmd.add("python/tricker.py");
         cmd.add(generationId);
         cmd.add(ticker);
