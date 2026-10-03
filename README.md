@@ -267,7 +267,7 @@ block-beta
     
     A1["Anshuman Pandey"] A2["C &amp; C++ Core Engine, System Design, and Multi-Tier Caching Architecture"]
     B1["Shubhangi Roy"] B2["Initial RAG Implementation (Legacy) &amp; Java Orchestrator (Modern)"]
-    C1["Puja Rani"] C2["Frontend Development"]
+    C1["Puja Rani Bhuyan"] C2["Frontend Development"]
     D1["Chitrangi Samal"] D2["FastAPI Backend, Redis/Celery Queuing, &amp; Database Architecture"]
     E1["Om Roy"] E2["Python Stealth Scrapers"]
     F1["Harshit Jaswal"] F2["PDF Template Design, PDF Data Injection, &amp; Python SQLite Integration"]
@@ -292,7 +292,7 @@ block-beta
 **GitHub Profiles:**
 - [Anshuman Pandey](https://github.com/AnshumanJ28)
 - [Shubhangi Roy](https://github.com/ShubhangiRoy12)
-- [Puja Rani](https://github.com/pujaux)
+- [Puja Rani Bhuyan](https://github.com/pujaux)
 - [Chitrangi Samal](https://github.com/ChitrangiS)
 - [Om Roy](https://github.com/omroy07)
 - [Harshit Jaswal](https://github.com/jaiswalharshit9792)
