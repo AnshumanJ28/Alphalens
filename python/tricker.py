@@ -64,7 +64,41 @@ def fetch_single_ticker(ticker, session):
         if not data["alpha_vantage"]["INCOME_STATEMENT"]["annualReports"]:
             del data["alpha_vantage"]
 
-    # 1. Fetch Alpha Vantage if key is available (Bypasses Yahoo Finance Cloudflare Blocks)
+    # 1. Fetch via ScraperAPI REST (Bulletproof Yahoo Timeseries Bypass)
+    scraper_key = os.getenv("SCRAPER_API_KEY")
+    if scraper_key and "modern_income_stmt" not in data:
+        print(f"  [Tricker] Using ScraperAPI REST for {ticker} financials...")
+        try:
+            import urllib.parse
+            ts_url = f"https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/{ticker}?symbol={ticker}&type=annualTotalRevenue,annualGrossProfit,annualOperatingIncome,annualNetIncome,annualEBITDA,annualTotalAssets,annualTotalLiabilities,annualTotalCurrentAssets,annualTotalCurrentLiabilities,annualInventory,annualTotalDebt,annualTotalStockholderEquity,annualRetainedEarnings,annualCashAndCashEquivalents,annualOperatingCashFlow,annualCapitalExpenditure,annualFreeCashFlow&period1=0&period2=9999999999"
+            api_url = f"http://api.scraperapi.com?api_key={scraper_key}&url={urllib.parse.quote(ts_url)}"
+            r = requests.get(api_url, timeout=60)
+            if r.status_code == 200:
+                ts = r.json().get("timeseries", {}).get("result", [])
+                inc, bs, cf = {}, {}, {}
+                
+                # Mapping definitions
+                inc_map = {"annualTotalRevenue": "Total Revenue", "annualGrossProfit": "Gross Profit", "annualOperatingIncome": "Operating Income", "annualNetIncome": "Net Income", "annualEBITDA": "EBITDA"}
+                bs_map = {"annualTotalAssets": "Total Assets", "annualTotalLiabilities": "Total Liabilities Net Minority Interest", "annualTotalCurrentAssets": "Current Assets", "annualTotalCurrentLiabilities": "Current Liabilities", "annualInventory": "Inventory", "annualTotalDebt": "Total Debt", "annualTotalStockholderEquity": "Stockholders Equity", "annualRetainedEarnings": "Retained Earnings", "annualCashAndCashEquivalents": "Cash And Cash Equivalents"}
+                cf_map = {"annualOperatingCashFlow": "Operating Cash Flow", "annualCapitalExpenditure": "Capital Expenditure", "annualFreeCashFlow": "Free Cash Flow"}
+                
+                for item in ts:
+                    meta_type = item.get("meta", {}).get("type", [""])[0]
+                    if meta_type in item and len(item[meta_type]) > 0:
+                        val = item[meta_type][-1].get("reportedValue", {}).get("raw")
+                        if val is not None:
+                            if meta_type in inc_map: inc[inc_map[meta_type]] = val
+                            elif meta_type in bs_map: bs[bs_map[meta_type]] = val
+                            elif meta_type in cf_map: cf[cf_map[meta_type]] = val
+                
+                if inc: data["modern_income_stmt"] = {"latest": inc}
+                if bs: data["modern_balance_sheet"] = {"latest": bs}
+                if cf: data["modern_cashflow"] = {"latest": cf}
+                print(f"  [Tricker] Successfully parsed ScraperAPI REST timeseries for {ticker}")
+        except Exception as e:
+            print(f"  [Tricker] ScraperAPI REST error: {e}")
+
+    # 2. Fetch Alpha Vantage if key is available (Bypasses Yahoo Finance Cloudflare Blocks)
     av_key = os.getenv("ALPHAVANTAGE_KEY")
     if av_key:
         print(f"  [Tricker] Using Alpha Vantage for {ticker} financials...")
