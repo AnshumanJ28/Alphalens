@@ -34,7 +34,7 @@ public class ApiFetcher {
                 System.err.println("  [Java/ApiFetcher] Failed to copy cached data: " + e.getMessage());
             }
             // Still fetch fresh news every time.
-            NewsManager.fetchNews(ticker, generationId);
+            NewsManager.fetchNews(ticker, generationId, skipYahoo);
             return "json/" + generationId + "_yf_temp.json";
         }
 
@@ -87,7 +87,7 @@ public class ApiFetcher {
                 System.err.println("  [Java/ApiFetcher] FATAL: python/tricker.py exited with code " + exitCode);
             } else {
                 System.out.println("  [Java/ApiFetcher] Successfully fetched Yahoo data.");
-                NewsManager.fetchNews(ticker, generationId);
+                NewsManager.fetchNews(ticker, generationId, false);
             }
         } catch (Exception e) {
             System.err.println("  [Java/ApiFetcher] Exception running Python tricker: " + e.getMessage());

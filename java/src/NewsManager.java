@@ -115,7 +115,6 @@ public class NewsManager {
                         cleanedArticles.add(cleanArticle);
                     }
                 }
-                String outputPath = "json/" + generationId + "_news_temp.json";
                 Gson gson = new Gson();
                 String cleanJson = gson.toJson(cleanedArticles);
                 Files.writeString(Path.of(outputPath), cleanJson);
