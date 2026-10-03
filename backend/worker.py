@@ -50,6 +50,7 @@ def create_task_record(task_id: str, user_id: str, ticker: str) -> None:
         "status": "PENDING",
         "generation_id": None,
         "pdf_path": None,
+        "json_path": None,
         "error": None,
         "created_at": time.time(),
     }
@@ -87,7 +88,7 @@ def _run_task(task_id: str, user_id: str, ticker: str, skip_yahoo: bool) -> dict
 
     generation_id = result["generation_id"]
     try:
-        pipeline.cleanup_generation(generation_id, result["ticker"], keep_final_pdf=True)
+        pipeline.cleanup_generation(generation_id, result["ticker"], keep_final_artifacts=True)
     except Exception:
         pass  # cleanup failures must never mask a successful pipeline run
 
@@ -98,6 +99,7 @@ def _run_task(task_id: str, user_id: str, ticker: str, skip_yahoo: bool) -> dict
         status="COMPLETED",
         generation_id=generation_id,
         pdf_path=result["pdf_path"],
+        json_path=result["json_path"],
     )
     return {"status": "COMPLETED", "generation_id": generation_id}
 

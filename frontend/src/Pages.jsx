@@ -1,12 +1,48 @@
 import { useEffect, useState } from "react";
 import * as api from "./api";
 
-const MOCK = import.meta.env.VITE_USE_MOCK !== "false";
-const STAGE_INFO = {
-  PENDING: { name: "Queued", note: "Waiting for a worker", color: "var(--mute)" },
-  PROCESSING: { name: "Researching", note: "Gathering data and crunching numbers", color: "var(--lilac)" },
-  COMPLETED: { name: "Done", note: "Your report is ready", color: "var(--chrome-done)" },
-};
+/* ── Loading animation: 3 stock bars ─────────────────────────────────── */
+function StockBarsLoader({ ticker }) {
+  return (
+    <section className="hero loading-section">
+      <h1 className="loading-title">Analyzing {ticker}</h1>
+      <p className="lede">Gathering financial data, crunching ratios, scoring sentiment…</p>
+      <div className="stock-bars-loader">
+        <div className="stock-bar" style={{ "--i": 0 }} />
+        <div className="stock-bar" style={{ "--i": 1 }} />
+        <div className="stock-bar" style={{ "--i": 2 }} />
+      </div>
+    </section>
+  );
+}
+
+/* ── Metric card for the report view ────────────────────────────────── */
+function MetricCard({ label, value, status, icon }) {
+  return (
+    <div className={`metric-card ${status || ""}`}>
+      <div className="metric-icon">{icon}</div>
+      <div className="metric-body">
+        <span className="metric-label">{label}</span>
+        <span className="metric-value">{value}</span>
+      </div>
+      {status && <span className={`pill ${status}`}>{status}</span>}
+    </div>
+  );
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────── */
+function healthFlag(name, val) {
+  if (name === "pe_ratio") return val < 20 ? "healthy" : val < 35 ? "watch" : "concerning";
+  if (name === "current_ratio") return val > 1.5 ? "healthy" : val > 1.0 ? "watch" : "concerning";
+  if (name === "net_margin") return val > 0.12 ? "healthy" : val > 0.05 ? "watch" : "concerning";
+  if (name === "debt_to_equity") return val < 0.5 ? "healthy" : val < 1.0 ? "watch" : "concerning";
+  return "watch";
+}
+
+function formatRatio(name, val) {
+  if (name.includes("margin") || name === "roe" || name === "roa") return (val * 100).toFixed(2) + "%";
+  return val?.toFixed(2) ?? "—";
+}
 
 export function Home({ go, authed }) {
   const [ticker, setTicker] = useState("");
@@ -14,7 +50,6 @@ export function Home({ go, authed }) {
 
   async function submit(e) {
     e.preventDefault();
-    if (!authed) return go("login");
     try {
       const t = ticker.trim().toUpperCase();
       const { task_id } = await api.startResearch(t);
@@ -32,22 +67,17 @@ export function Home({ go, authed }) {
       <p className="lede">Enter a ticker. Alphalens reads the filings and the news, works out the ratios, and hands you a cited report.</p>
       <form onSubmit={submit} className="search">
         <input value={ticker} onChange={(e) => setTicker(e.target.value)} placeholder="INFY.NS" aria-label="Stock ticker" required />
-        <button className="cta">{authed ? "Run research" : "Log in to run research"}</button>
+        <button className="cta">Run research</button>
       </form>
       {err && <p className="error" role="alert">{err}</p>}
-      <ol className="stages">
-        {Object.entries(STAGE_INFO).map(([key, s]) => (
-          <li key={key} style={{ "--c": s.color }}><b>{s.name}</b><span>{s.note}</span></li>
-        ))}
-      </ol>
     </section>
   );
 }
 
 export function Report({ id, ticker }) {
   const [status, setStatus] = useState("PENDING");
-  const [pdfUrl, setPdfUrl] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
+  const [pdfUrl, setPdfUrl] = useState(null);
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -59,8 +89,16 @@ export function Report({ id, ticker }) {
         setStatus(s.status);
         if (s.status === "FAILED") setErr(s.error || "The research task failed.");
         else if (s.status === "COMPLETED") {
-          if (MOCK) setSnapshot(await api.getSnapshot(ticker));
-          else setPdfUrl(await api.getResult(id)); // one-shot: fetched exactly once
+          // Fetch JSON snapshot for metrics display
+          try {
+            const data = await api.getResultJSON(id);
+            if (alive) setSnapshot(data);
+          } catch { /* JSON endpoint might not exist, fall through */ }
+          // Fetch PDF for download
+          try {
+            const url = await api.getResult(id);
+            if (alive) setPdfUrl(url);
+          } catch { /* PDF might not exist */ }
         } else timer = setTimeout(tick, 2500);
       } catch (x) { alive && setErr(x.message); }
     };
@@ -71,86 +109,108 @@ export function Report({ id, ticker }) {
   if (err) return <p className="error" role="alert">Could not load this report: {err}</p>;
 
   if (status !== "COMPLETED") {
-    return (
-      <section className="hero">
-        <h1>Working on {ticker}</h1>
-        <ol className="stages live">
-          {Object.entries(STAGE_INFO).filter(([k]) => k !== "COMPLETED").map(([key, s]) => (
-            <li key={key} style={{ "--c": s.color }} className={status === key ? "active" : status === "COMPLETED" ? "done" : ""}>
-              <b>{s.name}</b><span>{s.note}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
-    );
+    return <StockBarsLoader ticker={ticker} />;
   }
 
-  // Real mode: the backend only returns the finished PDF, so that's all we can show.
-  if (!MOCK) {
-    return (
-      <section className="hero">
-        <h1>{ticker} report is ready</h1>
-        <p className="lede">This view is the PDF itself — the backend doesn't yet return the underlying ratios, sentiment or peer data separately, only the finished file.</p>
-        <a className="cta" href={pdfUrl} download={`${ticker}.pdf`}>Download PDF</a>
-        {pdfUrl && <iframe title={`${ticker} report`} src={pdfUrl} style={{ width: "100%", height: "80vh", border: "1px solid var(--glass-line)", borderRadius: 12, marginTop: "2rem" }} />}
-      </section>
-    );
+  // --- Pick 5 key metrics from the snapshot ---
+  const metrics = [];
+  if (snapshot) {
+    // Composite score
+    metrics.push({
+      label: "Composite Score",
+      value: snapshot.composite_score != null ? `${snapshot.composite_score.toFixed(1)} / 10` : "—",
+      status: snapshot.composite_score >= 7 ? "healthy" : snapshot.composite_score >= 5 ? "watch" : "concerning",
+    });
+
+    // Conviction
+    metrics.push({
+      label: "Conviction",
+      value: snapshot.conviction_label || "—",
+      status: (snapshot.conviction_label || "").includes("BUY") ? "healthy" : "watch",
+    });
+
+    // Sentiment
+    const sentLabel = snapshot.sentiment?.overall_label || "—";
+    const sentScore = snapshot.sentiment?.overall_score;
+    metrics.push({
+      label: "Sentiment",
+      value: sentLabel + (sentScore != null ? ` (${sentScore.toFixed(2)})` : ""),
+      status: sentScore > 0.05 ? "healthy" : sentScore < -0.05 ? "concerning" : "watch",
+    });
+
+    // Pick 2 key ratios from the ratios array
+    const ratioMap = {};
+    (snapshot.ratios || []).forEach((r) => { ratioMap[r.name] = r; });
+
+    const peRatio = ratioMap["pe_ratio"];
+    if (peRatio && peRatio.value != null) {
+      metrics.push({
+        label: "P/E Ratio",
+        value: peRatio.formatted || peRatio.value.toFixed(2),
+        status: peRatio.health_flag?.toLowerCase() || healthFlag("pe_ratio", peRatio.value),
+      });
+    }
+
+    const netMargin = ratioMap["net_margin"];
+    if (netMargin && netMargin.value != null) {
+      metrics.push({
+        label: "Net Margin",
+        value: netMargin.formatted || formatRatio("net_margin", netMargin.value),
+        status: netMargin.health_flag?.toLowerCase() || healthFlag("net_margin", netMargin.value),
+      });
+    }
   }
 
-  // Mock mode: the richer memo layout, for demoing the intended design.
-  const data = snapshot; const s = data.sentiment;
-  function downloadDemoPdf() {
-    const lines = [
-      `${data.company} — Research Memo (demo data)`, "",
-      data.summary, "",
-      "Financial health:",
-      ...data.ratios.map((r) => `  ${r.name}: ${r.value} (${r.status})`), "",
-      `Sentiment: ${s.label} — ${s.positive}% positive, ${s.neutral}% neutral, ${s.negative}% negative`, "",
-      `Against ${data.peer.ticker}:`,
-      ...data.peer.rows.map((r) => `  ${r.metric} — ${data.company}: ${r.target}, ${data.peer.ticker}: ${r.peer}`),
-    ].join("\n");
-    const url = URL.createObjectURL(new Blob([lines], { type: "text/plain" }));
-    const a = document.createElement("a");
-    a.href = url; a.download = `${data.company}-demo-report.txt`; a.click();
-    URL.revokeObjectURL(url);
-  }
   return (
-    <article className="memo">
-      <p className="meta">Research memo · demo data</p>
-      <h1>{data.company}</h1>
-      <p className="lede">{data.summary}</p>
-      <button className="cta" onClick={downloadDemoPdf}>Download report</button>
-      <p className="download-note">This is a plain-text stand-in — real PDFs come from your backend's /api/result once it's connected.</p>
+    <article className="report-view">
+      <p className="meta">Research Report</p>
+      <h1>{ticker.replace(".NS", "")} <span className="ticker-suffix">{ticker.includes(".") ? ticker.slice(ticker.indexOf(".")) : ""}</span></h1>
 
-      <h2>Financial health</h2>
-      <table>
-        <tbody>
-          {data.ratios.map((r) => (
-            <tr key={r.name}><td>{r.name}</td><td className="num">{r.value}</td><td><span className={`pill ${r.status}`}>{r.status}</span></td></tr>
-          ))}
-        </tbody>
-      </table>
+      {metrics.length > 0 && (
+        <div className="minimal-metrics-wrapper">
+          <table className="metrics-table">
+            <tbody>
+              {metrics.map((m, i) => (
+                <tr key={i}>
+                  <th>{m.label}</th>
+                  <td className="metric-val">{m.value}</td>
+                  <td className="metric-status">
+                    {m.status && <span className={`pill ${m.status}`}>{m.status}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      <h2>News and transcript tone: {s.label}</h2>
-      <div className="bar" role="img" aria-label={`${s.positive}% positive, ${s.neutral}% neutral, ${s.negative}% negative`}>
-        <i className="p" style={{ width: s.positive + "%" }} />
-        <i className="n" style={{ width: s.neutral + "%" }} />
-        <i className="x" style={{ width: s.negative + "%" }} />
-      </div>
-      <p className="legend">{s.positive}% positive, {s.neutral}% neutral, {s.negative}% negative</p>
+      {pdfUrl && (
+        <div className="pdf-download-section">
+          <p className="pdf-note">For a more detailed breakdown, download the full PDF report.</p>
+          <a className="cta" href={pdfUrl} download={`${ticker}.pdf`}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Download PDF
+          </a>
+        </div>
+      )}
 
-      <h2>Against {data.peer.ticker}</h2>
-      <table>
-        <thead><tr><th>Metric</th><th className="num">{data.company}</th><th className="num">{data.peer.ticker}</th></tr></thead>
-        <tbody>
-          {data.peer.rows.map((r) => (
-            <tr key={r.metric}><td>{r.metric}</td><td className="num">{r.target}</td><td className="num">{r.peer}</td></tr>
-          ))}
-        </tbody>
-      </table>
+      {!snapshot && !pdfUrl && (
+        <p className="lede">Report data is loading…</p>
+      )}
     </article>
   );
 }
+
+/* ── Kept for future use ─────────────────────────────────────────────── */
+
+// Old stage info for reference
+// const STAGE_INFO = {
+//   PENDING: { name: "Queued", note: "Waiting for a worker", color: "var(--mute)" },
+//   PROCESSING: { name: "Researching", note: "Gathering data and crunching numbers", color: "var(--lilac)" },
+//   COMPLETED: { name: "Done", note: "Your report is ready", color: "var(--chrome-done)" },
+// };
 
 export function History({ go }) {
   const [rows, setRows] = useState(null);
@@ -159,10 +219,7 @@ export function History({ go }) {
     <section className="hero">
       <h1>Your past research</h1>
       {rows && rows.length === 0 && (
-        <p className="lede">
-          {MOCK ? "Nothing here yet. Run your first ticker from the home page."
-                : "The backend doesn't have a history endpoint yet — searches are logged, but nothing reads them back."}
-        </p>
+        <p className="lede">Nothing here yet. Run your first ticker from the home page.</p>
       )}
       <ul className="history">
         {(rows || []).map((h) => (

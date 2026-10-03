@@ -9,6 +9,17 @@
 #include <sqlite3.h>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
+
+static std::string fix_utf8(const char* text) {
+    if (!text) return "";
+    std::string str(text);
+    std::string out;
+    for (unsigned char c : str) {
+        if (c < 0x80) out += c;
+        else out += ' ';
+    }
+    return out;
+}
 static std::string fmt_double(double val, int precision = 4) {
     std::ostringstream ss;
     ss << std::fixed << std::setprecision(precision) << val;
@@ -25,13 +36,13 @@ static std::string fmt_metric(const std::string& name, double val) {
         double pct = (val > 0.5) ? val : (val * 100.0);
         return fmt_double(pct, 2) + "%";
     } else if (name == "enterprise_value" || name == "market_cap") {
-        if (val >= 1e12) return "₹" + fmt_double(val / 1e12, 2) + "T";
-        if (val >= 1e9)  return "₹" + fmt_double(val / 1e9, 2)  + "B";
-        if (val >= 1e6)  return "₹" + fmt_double(val / 1e6, 2)  + "M";
-        return "₹" + fmt_double(val, 2);
+        if (val >= 1e12) return "Rs. " + fmt_double(val / 1e12, 2) + "T";
+        if (val >= 1e9)  return "Rs. " + fmt_double(val / 1e9, 2)  + "B";
+        if (val >= 1e6)  return "Rs. " + fmt_double(val / 1e6, 2)  + "M";
+        return "Rs. " + fmt_double(val, 2);
     } else if (name == "current_price" || name == "target_price" ||
                name == "52_week_high"  || name == "52_week_low") {
-        return "₹" + fmt_double(val, 2);
+        return "Rs. " + fmt_double(val, 2);
     } else if (name == "beta") {
         if (std::abs(val) < 0.005) return "0.00";
         return fmt_double(val, 2);
@@ -76,7 +87,7 @@ std::string JsonSnapshotWriter::generate_snapshot(const std::string& ticker,
         if (sqlite3_prepare_v2(db, q.c_str(), -1, &st, nullptr) == SQLITE_OK) {
             if (sqlite3_step(st) == SQLITE_ROW) {
                 snapshot["composite_score"]    = sqlite3_column_double(st, 0);
-                snapshot["conviction_label"]   = reinterpret_cast<const char*>(sqlite3_column_text(st, 1));
+                snapshot["conviction_label"]   = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 1)));
             }
         }
         sqlite3_finalize(st);
@@ -87,7 +98,7 @@ std::string JsonSnapshotWriter::generate_snapshot(const std::string& ticker,
         json sent_obj;
         if (sqlite3_prepare_v2(db, q.c_str(), -1, &st, nullptr) == SQLITE_OK) {
             if (sqlite3_step(st) == SQLITE_ROW) {
-                sent_obj["overall_label"] = reinterpret_cast<const char*>(sqlite3_column_text(st, 0));
+                sent_obj["overall_label"] = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 0)));
                 sent_obj["overall_score"] = sqlite3_column_double(st, 1);
             }
         }
@@ -102,13 +113,13 @@ std::string JsonSnapshotWriter::generate_snapshot(const std::string& ticker,
         if (sqlite3_prepare_v2(db, q.c_str(), -1, &st, nullptr) == SQLITE_OK) {
             while (sqlite3_step(st) == SQLITE_ROW) {
                 json r;
-                std::string name   = reinterpret_cast<const char*>(sqlite3_column_text(st, 0));
-                std::string cat    = (sqlite3_column_text(st, 1)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 1)) : "";
+                std::string name   = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 0)));
+                std::string cat    = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 1)));
                 double      val    = sqlite3_column_double(st, 2);
-                std::string health = (sqlite3_column_text(st, 3)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 3)) : "";
-                std::string narr   = (sqlite3_column_text(st, 4)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 4)) : "";
-                std::string status = (sqlite3_column_text(st, 5)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 5)) : "CALCULATED";
-                std::string note   = (sqlite3_column_text(st, 6)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 6)) : "";
+                std::string health = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 3)));
+                std::string narr   = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 4)));
+                std::string status = sqlite3_column_text(st, 5) ? fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 5))) : "CALCULATED";
+                std::string note   = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 6)));
                 r["name"]           = name;
                 r["display_name"]   = prettify_name(name);
                 r["category"]       = cat;
@@ -137,7 +148,8 @@ std::string JsonSnapshotWriter::generate_snapshot(const std::string& ticker,
             if (sqlite3_step(st) == SQLITE_ROW) {
                 if (sqlite3_column_text(st, 0)) {
                     try {
-                        json raw = json::parse(reinterpret_cast<const char*>(sqlite3_column_text(st, 0)));
+                        std::string clean_json = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 0)));
+                        json raw = json::parse(clean_json);
                         if (raw.is_array()) {
                             for (const auto& item : raw) {
                                 json ks;
@@ -166,12 +178,12 @@ std::string JsonSnapshotWriter::generate_snapshot(const std::string& ticker,
         if (sqlite3_prepare_v2(db, q.c_str(), -1, &st, nullptr) == SQLITE_OK) {
             while (sqlite3_step(st) == SQLITE_ROW) {
                 json ex;
-                std::string segment = (sqlite3_column_text(st, 0)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 0)) : "";
-                ex["excerpt"]      = (sqlite3_column_text(st, 1)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 1)) : "";
-                ex["label"]        = (sqlite3_column_text(st, 2)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 2)) : "";
+                std::string segment = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 0)));
+                ex["excerpt"]      = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 1)));
+                ex["label"]        = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 2)));
                 ex["confidence"]   = sqlite3_column_double(st, 3);
-                ex["source_url"]   = (sqlite3_column_text(st, 4)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 4)) : "";
-                ex["published_at"] = (sqlite3_column_text(st, 5)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 5)) : "";
+                ex["source_url"]   = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 4)));
+                ex["published_at"] = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 5)));
                 if (segment == "NEWS") {
                     news_arr.push_back(ex);
                 } else {
@@ -191,8 +203,8 @@ std::string JsonSnapshotWriter::generate_snapshot(const std::string& ticker,
         if (sqlite3_prepare_v2(db, q.c_str(), -1, &st, nullptr) == SQLITE_OK) {
             while (sqlite3_step(st) == SQLITE_ROW) {
                 json pb;
-                pb["peer_ticker"]      = (sqlite3_column_text(st, 0)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 0)) : "";
-                pb["ratio_name"]       = (sqlite3_column_text(st, 1)) ? reinterpret_cast<const char*>(sqlite3_column_text(st, 1)) : "";
+                pb["peer_ticker"]      = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 0)));
+                pb["ratio_name"]       = fix_utf8(reinterpret_cast<const char*>(sqlite3_column_text(st, 1)));
                 pb["ticker_value"]     = sqlite3_column_double(st, 2);
                 pb["peer_value"]       = sqlite3_column_double(st, 3);
                 pb["premium_discount"] = sqlite3_column_double(st, 4);
@@ -208,7 +220,7 @@ std::string JsonSnapshotWriter::generate_snapshot(const std::string& ticker,
         std::cerr << "[JsonSnapshot] Failed to write: " << json_path << "\n";
         return "";
     }
-    out << snapshot.dump(2);
+    out << snapshot.dump(2, ' ', true, json::error_handler_t::replace);
     out.close();
     std::cout << "[C++] Generated JSON snapshot: " << json_path << "\n";
     std::cout << "[GENERATION_ID] " << generation_id << "\n";

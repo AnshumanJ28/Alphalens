@@ -45,6 +45,9 @@ def fetch_yahoo_data(generation_id, tickers):
                 if ticker == tickers[0]:
                     with open(f"json/{generation_id}_yf_temp.json", "w", encoding="utf-8") as f:
                         json.dump(data, f)
+                    os.makedirs(f"cache/{ticker}", exist_ok=True)
+                    with open(f"cache/{ticker}/yf_cache.json", "w", encoding="utf-8") as f:
+                        json.dump(data, f)
                     print(f"  [Tricker] Downloaded complete main data for {ticker}")
                 else:
                     peers_data[ticker] = data
@@ -54,7 +57,11 @@ def fetch_yahoo_data(generation_id, tickers):
     if peers_data:
         with open(f"json/{generation_id}_peers_temp.json", "w", encoding="utf-8") as f:
             json.dump(peers_data, f)
-        print(f"  [Tricker] Saved all peers to peers_temp.json")
+        main_ticker = tickers[0]
+        os.makedirs(f"cache/{main_ticker}", exist_ok=True)
+        with open(f"cache/{main_ticker}/peers_cache.json", "w", encoding="utf-8") as f:
+            json.dump(peers_data, f)
+        print(f"  [Tricker] Saved all peers to peers_temp.json and peers_cache.json")
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage: python tricker.py <generation_id> <main_ticker> [peer1] [peer2] ...")

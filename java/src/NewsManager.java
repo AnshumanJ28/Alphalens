@@ -12,7 +12,20 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 public class NewsManager {
-    public static void fetchNews(String ticker, String generationId) {
+    public static void fetchNews(String ticker, String generationId, boolean useCache) {
+        Path cachePath = Path.of("cache", ticker, "news_cache.json");
+        String outputPath = "json/" + generationId + "_news_temp.json";
+        
+        if (useCache && Files.exists(cachePath)) {
+            System.out.println("  [Java/NewsManager] FAST LANE: Using cached news for " + ticker);
+            try {
+                Files.copy(cachePath, Path.of(outputPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                return;
+            } catch (Exception e) {
+                System.err.println("  [Java/NewsManager] Failed to copy cached news: " + e.getMessage());
+            }
+        }
+
         System.out.println("  [Java/NewsManager] Starting NewsAPI ingestion for " + ticker);
         String apiKey = null;
         try {
@@ -106,6 +119,12 @@ public class NewsManager {
                 Gson gson = new Gson();
                 String cleanJson = gson.toJson(cleanedArticles);
                 Files.writeString(Path.of(outputPath), cleanJson);
+                try {
+                    Files.createDirectories(cachePath.getParent());
+                    Files.writeString(cachePath, cleanJson);
+                } catch (Exception e) {
+                    System.err.println("  [Java/NewsManager] Failed to cache news: " + e.getMessage());
+                }
                 System.out.println("  [Java/NewsManager] Downloaded and cleaned " + cleanedArticles.size() + " unique news articles for " + cleanTicker);
             } else {
                 System.err.println("  [Java/NewsManager] Failed to fetch news: " + response.statusCode() + " - " + response.body());

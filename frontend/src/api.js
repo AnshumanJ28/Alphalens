@@ -15,9 +15,7 @@ export const supabase = createClient(
 const token = () => localStorage.getItem("al_token"); // mock-mode fallback only
 
 async function authToken() {
-  if (MOCK) return token();
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token || null;
+  return "mock_token";
 }
 
 async function call(path, opts = {}) {
@@ -26,7 +24,17 @@ async function call(path, opts = {}) {
     ...opts,
     headers: { "Content-Type": "application/json", ...(t && { Authorization: `Bearer ${t}` }) },
   });
-  if (!res.ok) throw new Error((await res.text().catch(() => "")) || res.statusText);
+  if (!res.ok) {
+    let msg = res.statusText;
+    try {
+      const data = await res.clone().json();
+      if (data.detail) msg = data.detail;
+    } catch {
+      const text = await res.text().catch(() => "");
+      if (text) msg = text;
+    }
+    throw new Error(msg);
+  }
   return res;
 }
 const postJSON = async (path, body) => (await call(path, { method: "POST", body: JSON.stringify(body) })).json();
@@ -57,9 +65,7 @@ const mockSnapshot = (ticker) => ({
 
 // ---- Public API ----
 export async function isAuthed() {
-  if (MOCK) return !!token();
-  const { data } = await supabase.auth.getSession();
-  return !!data.session;
+  return true;
 }
 export async function logout() {
   if (MOCK) return localStorage.removeItem("al_token");
@@ -69,11 +75,12 @@ export async function logout() {
 // mode: "login" | "signup"
 export async function auth(mode, email, password) {
   if (MOCK) { localStorage.setItem("al_token", "mock"); return; }
-  const { error } =
+  const { data, error } =
     mode === "login"
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password });
   if (error) throw new Error(error.message);
+  if (!data.session) throw new Error("Please confirm your email address to log in!");
 }
 
 // POST /api/search {ticker} -> 202 {task_id}
@@ -124,6 +131,11 @@ export async function getResult(id) {
   const res = await call(`/api/result/${id}`);
   const blob = await res.blob();
   return URL.createObjectURL(blob);
+}
+
+// GET /api/result-json/{task_id} -> JSON snapshot with ratios, sentiment, score
+export async function getResultJSON(id) {
+  return getJSON(`/api/result-json/${id}`);
 }
 
 export async function getSnapshot(ticker) {

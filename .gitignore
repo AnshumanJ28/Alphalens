@@ -41,3 +41,5 @@ json/
 
 # Backend
 backend/__pycache__/
+node_modules/
+.env

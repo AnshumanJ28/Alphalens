@@ -72,7 +72,7 @@ def search(
 ) -> SearchResponse:
     ticker = validation.normalize_ticker(payload.ticker)
     if not validation.is_valid_ticker(ticker):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown ticker")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ticker for Indian stock market")
 
     task_id = str(uuid.uuid4())
 
@@ -113,11 +113,25 @@ def get_result(task_id: str, user: AuthenticatedUser = Depends(get_current_user)
 
     data = pdf_path.read_bytes()
 
-    pipeline.cleanup_generation(record["generation_id"], record["ticker"], keep_final_pdf=False)
-    delete_task_record(task_id)
-
     return Response(
         content=data,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{record["ticker"]}.pdf"'},
     )
+
+
+@app.get("/api/result-json/{task_id}")
+def get_result_json(task_id: str, user: AuthenticatedUser = Depends(get_current_user)) -> Response:
+    record = _get_owned_record(task_id, user)
+
+    if record["status"] == "FAILED":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Search failed")
+    if record["status"] != "COMPLETED":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Result not ready yet")
+
+    json_path = Path(record["json_path"]) if record.get("json_path") else None
+    if not json_path or not json_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="JSON result no longer available")
+
+    data = json_path.read_bytes()
+    return Response(content=data, media_type="application/json")

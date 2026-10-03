@@ -125,7 +125,7 @@ def run_pipeline(ticker: str, skip_yahoo: bool = False) -> dict:
     }
 
 
-def cleanup_generation(generation_id: str, ticker: str, keep_final_pdf: bool = False) -> None:
+def cleanup_generation(generation_id: str, ticker: str, keep_final_artifacts: bool = False) -> None:
     
     if not generation_id:
         return
@@ -138,9 +138,9 @@ def cleanup_generation(generation_id: str, ticker: str, keep_final_pdf: bool = F
         json_dir / f"{generation_id}_yf_temp.json",
         json_dir / f"{generation_id}_news_temp.json",
         json_dir / f"{generation_id}_peers_temp.json",
-        reports_dir / f"{ticker}_{generation_id}.json",
     ]
-    if not keep_final_pdf:
+    if not keep_final_artifacts:
+        candidates.append(reports_dir / f"{ticker}_{generation_id}.json")
         candidates.append(reports_dir / f"{ticker}_{generation_id}.pdf")
 
     for path in candidates:

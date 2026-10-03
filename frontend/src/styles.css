@@ -13,6 +13,15 @@ body {
   margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--sans);
   -webkit-font-smoothing: antialiased; position: relative; min-height: 100vh;
 }
+
+/* ── Themed scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--lilac); }
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
+
 /* Soft corner light, static */
 body::before {
   content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
@@ -36,10 +45,17 @@ body::before {
 .chart-backdrop {
   display: block; width: 100%; height: 100%;
   opacity: .75; mix-blend-mode: screen;
-  /* fade every edge into the page so nothing ends in a hard line */
   -webkit-mask-image: radial-gradient(ellipse 85% 70% at 70% 45%, #000 30%, transparent 85%);
           mask-image: radial-gradient(ellipse 85% 70% at 70% 45%, #000 30%, transparent 85%);
   animation: backdrop-rise 45s ease-in-out infinite alternate;
+}
+/* Ribbon pulse animation */
+.ribbon-group {
+  animation: ribbon-pulse 4s ease-in-out infinite alternate;
+}
+@keyframes ribbon-pulse {
+  from { opacity: .85; }
+  to   { opacity: 1; filter: brightness(1.15); }
 }
 @keyframes backdrop-rise {
   from { transform: translateY(0); }
@@ -47,6 +63,7 @@ body::before {
 }
 @media (prefers-reduced-motion: reduce) {
   .chart-backdrop { animation: none; }
+  .ribbon-group { animation: none; }
 }
 @media (max-width: 760px) {
   .bg-parallax__move { width: 100vw; }
@@ -58,8 +75,10 @@ button { cursor: pointer; background: none; border: 0; }
 :focus-visible { outline: 2px solid var(--orchid); outline-offset: 3px; }
 
 .nav { display: flex; justify-content: space-between; align-items: center; padding: 1.1rem clamp(1rem, 5vw, 4rem); border-bottom: 1px solid var(--border); background: var(--glass-bg); backdrop-filter: blur(16px) saturate(140%); position: sticky; top: 0; z-index: 10; }
-.nav nav { display: flex; gap: 1.5rem; }
+.nav nav { display: flex; gap: 1.5rem; align-items: center; }
 .nav nav button { color: var(--mute); transition: color .15s; font-weight: 500; } .nav nav button:hover { color: var(--fg); }
+.nav-github { color: var(--mute); transition: color .15s; display: inline-flex; align-items: center; }
+.nav-github:hover { color: var(--orchid); }
 .brand { display: inline-flex; align-items: center; gap: .55rem; font: 700 1.45rem var(--display); letter-spacing: -.01em; color: var(--orchid); }
 .brand-mark { flex-shrink: 0; }
 
@@ -94,7 +113,85 @@ h2 { font: 600 1.4rem var(--display); letter-spacing: -.01em; margin: 3rem 0 1re
 .link { color: var(--mute); margin-top: 1.25rem; text-decoration: underline; font-size: .95rem; }
 .link:hover { color: var(--fg); }
 
+/* ── Stock bars loading animation ─────────────────────────────────── */
+.loading-section {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.loading-title {
+  max-width: none; text-align: center;
+}
+.stock-bars-loader {
+  display: flex; gap: 8px; align-items: flex-end; height: 64px; margin-top: 3rem;
+}
+.stock-bar {
+  width: 10px; border-radius: 4px;
+  background: linear-gradient(to top, var(--orchid), var(--lilac));
+  animation: stock-bar-bounce 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.15s);
+}
+@keyframes stock-bar-bounce {
+  0%, 100% { height: 16px; opacity: .5; }
+  50% { height: 56px; opacity: 1; }
+}
 
+/* ── Metrics grid ─────────────────────────────────────────────────── */
+.report-view { max-width: 900px; }
+.report-view h1 { max-width: none; }
+.ticker-suffix { color: var(--mute); font-weight: 400; font-size: 0.55em; }
+.report-view .meta { color: var(--mute); margin: 0 0 .5rem; font-size: .85rem; text-transform: uppercase; letter-spacing: .07em; }
+
+.minimal-metrics-wrapper {
+  margin: 1.5rem 0 2rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(14px) saturate(140%);
+}
+.metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+}
+.metrics-table th, .metrics-table td {
+  padding: 1rem 1.25rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.metrics-table tr:last-child th,
+.metrics-table tr:last-child td {
+  border-bottom: none;
+}
+.metrics-table th {
+  color: var(--mute);
+  font-size: .85rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 600;
+  width: 35%;
+}
+.metric-val {
+  font: 600 1.15rem var(--display);
+  color: var(--fg);
+  letter-spacing: -.01em;
+}
+.metric-status {
+  text-align: right;
+  width: 25%;
+}
+
+.pill { padding: .2rem .8rem; border-radius: 6px; border: 1px solid currentColor; font-size: .75rem; text-transform: uppercase; font-weight: 700; letter-spacing: .05em; align-self: flex-start; }
+.pill.healthy { color: var(--green); } .pill.watch { color: var(--yellow); } .pill.concerning { color: var(--red); }
+
+/* ── PDF download section ────────────────────────────────────────── */
+.pdf-download-section {
+  margin-top: 2.5rem; padding-top: 2rem;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1rem;
+}
+.pdf-note { color: var(--mute); font-size: .95rem; margin: 0; }
+
+/* ── Old stages — kept for future use ────────────────────────────── */
 .stages { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; padding: 0; margin: 0; }
 .stages li {
   position: relative; border: 1px solid var(--border); background: var(--glass-bg);
@@ -117,8 +214,6 @@ table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: .85rem 0; border-bottom: 1px solid var(--border); }
 th { color: var(--mute); font-weight: 500; font-size: .9rem; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
-.pill { padding: .15rem .7rem; border-radius: 99px; border: 1px solid currentColor; font-size: .82rem; }
-.pill.healthy { color: var(--green); } .pill.watch { color: var(--yellow); } .pill.concerning { color: var(--red); }
 .bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--surface); }
 .bar .p { background: var(--green); } .bar .n { background: var(--border); } .bar .x { background: var(--red); }
 .legend { color: var(--mute); font-size: .9rem; }
@@ -163,41 +258,57 @@ th { color: var(--mute); font-weight: 500; font-size: .9rem; }
 .stack .cta { margin-top: .4rem; width: 100%; }
 .error { color: var(--red); font-size: .92rem; }
 
+/* ── Compact footer ──────────────────────────────────────────────── */
 .footer {
-  border-top: 1px solid var(--border); padding: 3.5rem clamp(1rem, 5vw, 4rem) 2.4rem;
-  max-width: 1080px; margin: clamp(4rem, 12vw, 9rem) auto 0; background: var(--glass-bg); backdrop-filter: blur(14px) saturate(140%); border-radius: 18px 18px 0 0;
+  border-top: 1px solid var(--border); padding: 1.5rem clamp(1rem, 5vw, 4rem) 1.2rem;
+  max-width: 1080px; margin: clamp(4rem, 12vw, 9rem) auto 0;
+  background: var(--glass-bg); backdrop-filter: blur(14px) saturate(140%);
+  border-radius: 14px 14px 0 0;
 }
+.footer-top-compact {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+}
+.footer-brand { display: inline-flex; align-items: center; gap: .4rem; }
+.footer-brand svg { flex-shrink: 0; }
+.footer-brand span { color: var(--orchid); font: 700 1rem var(--display); }
+
+.footer-github {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--mute); transition: color .15s, border-color .15s; text-decoration: none;
+}
+.footer-github:hover { color: var(--lilac); border-color: var(--lilac); }
+
+.footer-bottom {
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem;
+  margin-top: .8rem; color: var(--border); font-size: .75rem;
+}
+.footer-bottom p { margin: 0; }
+.footer-stack { color: var(--mute); }
+
+/* ── Old footer styles — kept for reference ──────────────────────── */
+/*
 .footer-top {
   display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 2rem 1.5rem;
   padding-bottom: 2.2rem; border-bottom: 1px solid var(--border);
 }
-.footer-brand { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
-.footer-brand svg, .footer-brand span { display: inline-flex; align-items: center; }
-.footer-brand > svg { margin-bottom: -.3rem; }
-.footer-brand span { color: var(--orchid); font: 700 1.1rem var(--display); }
 .footer-tagline { color: var(--mute); font-size: .92rem; max-width: 24ch; margin: .2rem 0 0; }
-
 .footer-col { display: flex; flex-direction: column; gap: .6rem; align-items: flex-start; }
 .footer-col h3 { margin: 0 0 .2rem; font: 600 .78rem var(--sans); color: var(--border); text-transform: uppercase; letter-spacing: .07em; }
 .footer-col button, .footer-col a { color: var(--mute); font-size: .92rem; text-decoration: none; transition: color .15s; text-align: left; }
 .footer-col button:hover, .footer-col a:hover { color: var(--fg); }
 .footer-static { color: var(--border); font-size: .85rem; }
-
 .footer-social { display: flex; gap: .7rem; }
 .footer-social a {
   display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
   border: 1px solid var(--border); border-radius: 8px; color: var(--mute); transition: color .15s, border-color .15s;
 }
 .footer-social a:hover { color: var(--lilac); border-color: var(--lilac); }
-
 .footer-note { color: var(--mute); font-size: .82rem; max-width: 68ch; margin: 1.6rem 0 0; }
-.footer-bottom {
-  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem;
-  margin-top: .9rem; color: var(--border); font-size: .8rem;
-}
-.footer-bottom p { margin: 0; }
+*/
 
 @media (max-width: 760px) {
-  .footer-top { grid-template-columns: 1fr 1fr; }
-  .footer-brand { grid-column: 1 / -1; }
+  .footer-top-compact { flex-direction: column; gap: .8rem; align-items: flex-start; }
+  .metrics-grid { grid-template-columns: 1fr; }
 }

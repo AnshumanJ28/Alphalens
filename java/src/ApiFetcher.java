@@ -23,9 +23,19 @@ public class ApiFetcher {
         if (skipYahoo) {
             // FAST LANE: Skip Python Yahoo scrape, assume cached data exists on disk.
             System.out.println("  [Java/ApiFetcher] FAST LANE: Skipping Yahoo scrape (cached data).");
+            try {
+                Path cacheDir = Path.of("cache", ticker);
+                Files.copy(cacheDir.resolve("yf_cache.json"), Path.of("json", generationId + "_yf_temp.json"), StandardCopyOption.REPLACE_EXISTING);
+                Path peersCache = cacheDir.resolve("peers_cache.json");
+                if (Files.exists(peersCache)) {
+                    Files.copy(peersCache, Path.of("json", generationId + "_peers_temp.json"), StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (IOException e) {
+                System.err.println("  [Java/ApiFetcher] Failed to copy cached data: " + e.getMessage());
+            }
             // Still fetch fresh news every time.
             NewsManager.fetchNews(ticker, generationId);
-            return "json/yf_temp.json";
+            return "json/" + generationId + "_yf_temp.json";
         }
 
         // SLOW LANE: Full Yahoo scrape via Python tricker.py

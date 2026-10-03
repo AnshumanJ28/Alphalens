@@ -115,10 +115,15 @@ public class TemplateEngine {
                 else if (lower.contains("negative")) sentClass = "sent-negative";
             }
             sb.append("<div class=\"excerpt\">")
-              .append("<span class=\"").append(sentClass).append("\">[").append(esc(label)).append("]</span> ")
-              .append(esc(excerpt));
+              .append("<span class=\"").append(sentClass).append("\">[").append(esc(label)).append("]</span> ");
             if (url != null && !url.isEmpty()) {
+                sb.append("<a href=\"").append(esc(url)).append("\" target=\"_blank\" style=\"text-decoration:none; color:inherit;\">").append(esc(excerpt)).append("</a>");
                 sb.append(" <span class=\"text-muted\">(").append(esc(date)).append(")</span>");
+            } else {
+                sb.append(esc(excerpt));
+                if (date != null && !date.isEmpty()) {
+                    sb.append(" <span class=\"text-muted\">(").append(esc(date)).append(")</span>");
+                }
             }
             sb.append("</div>");
         }
